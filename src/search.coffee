@@ -21,7 +21,7 @@ class Search
 
     # Filter out unsupported sources
     sources = (s for s in options.sources or [] when s in Search.SOURCES)
-    reqOptions.Sources = @quoted(sources) if sources.length
+    reqOptions.Sources = @quoted sources if sources.length
 
     if options.market in markets
       reqOptions.Market = @quoted(options.market)
@@ -75,8 +75,8 @@ class Search
       gzip: @useGzip
 
     req = request requestOptions, (err, res, body) ->
-      if res.statusCode isnt 200
-        err or= new Error("Bad Bing API response #{res.statusCode}")
+      unless err or res.statusCode is 200
+        err or= new Error "Bad Bing API response #{res.statusCode}"
       return callback err if err
 
       callback null, body
@@ -93,6 +93,11 @@ class Search
     # Two requests are needed. The first request is to get an accurate
     # web results count and the second request is to get an accurate count
     # for the rest of the verticals.
+    #
+    # The 1,000 value comes from empirical data. It seems that after 600
+    # results, the accuracy gets quite consistent and accurate. I picked 1,000
+    # just to be in the clear. It also doesn't matter if there are fewer than
+    # 1,000 results.
     async.map [{skip: 1000}, {}], getCounts, (err, results) ->
       return callback err if err
       callback null, _.extend results[1], _.pick(results[0], 'web')
@@ -124,47 +129,44 @@ class Search
       return callback err if err
       callback null, verticalResultParser result
 
+  mapResults: (results, fn) ->
+    _.chain(results)
+      .pluck('d')
+      .pluck('results')
+      .flatten()
+      .map fn
+      .value()
+
   web: (query, options, callback) ->
     @verticalSearch 'Web', _.bind(@extractWebResults, this), query, options,
       callback
 
   extractWebResults: (results) ->
-    _.chain(results)
-      .pluck('d')
-      .pluck('results')
-      .flatten()
-      .map (entry) ->
-        id: entry.ID
-        title: entry.Title
-        description: entry.Description
-        displayUrl: entry.DisplayUrl
-        url: entry.Url
-      .value()
+    @mapResults results, ({ID, Title, Description, DisplayUrl, Url}) ->
+      id: ID
+      title: Title
+      description: Description
+      displayUrl: DisplayUrl
+      url: Url
 
   images: (query, options, callback) ->
     @verticalSearch 'Image', _.bind(@extractImageResults, this), query, options,
       callback
 
   extractImageResults: (results) ->
-    _.chain(results)
-      .pluck('d')
-      .pluck('results')
-      .flatten()
-      .map (entry) =>
-        id: entry.ID
-        title: entry.Title
-        url: entry.MediaUrl
-        sourceUrl: entry.SourceUrl
-        displayUrl: entry.DisplayUrl
-        width: Number entry.Width
-        height: Number entry.Height
-        size: Number entry.FileSize
-        type: entry.ContentType
-        thumbnail: @extractThumbnail entry
-      .value()
+    @mapResults results, (entry) =>
+      id: entry.ID
+      title: entry.Title
+      url: entry.MediaUrl
+      sourceUrl: entry.SourceUrl
+      displayUrl: entry.DisplayUrl
+      width: Number entry.Width
+      height: Number entry.Height
+      size: Number entry.FileSize
+      type: entry.ContentType
+      thumbnail: @extractThumbnail entry
 
   extractThumbnail: ({Thumbnail}) ->
-
     url: Thumbnail.MediaUrl
     type: Thumbnail.ContentType
     width: Number Thumbnail.Width
@@ -176,18 +178,14 @@ class Search
       callback
 
   extractVideoResults: (results) ->
-    _.chain(results)
-      .pluck('d')
-      .pluck('results')
-      .flatten()
-      .map (entry) =>
+    @mapResults results,
+      (entry) =>
         id: entry.ID
         title: entry.Title
         url: entry.MediaUrl
         displayUrl: entry.DisplayUrl
         runtime: Number entry.RunTime
         thumbnail: @extractThumbnail entry
-      .value()
 
   news: (query, options, callback) ->
     @verticalSearch 'News', _.bind(@extractNewsResults, this), query, options,
