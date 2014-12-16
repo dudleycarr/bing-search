@@ -6,12 +6,13 @@ url = require 'url'
 
 markets = require './markets'
 
+BING_SEARCH_ENDPOINT = 'https://api.datamarket.azure.com/Bing/Search'
+
 class Search
   @SOURCES = ['web', 'image', 'video', 'news', 'spell', 'relatedsearch']
   @PAGE_SIZE = 50
 
   constructor: (@accountKey, @parallel = 10, @useGzip = true) ->
-    @endPoint = 'https://api.datamarket.azure.com/Bing/Search'
 
   requestOptions: (options) ->
     reqOptions =
@@ -23,9 +24,7 @@ class Search
     sources = (s for s in options.sources or [] when s in Search.SOURCES)
     reqOptions.Sources = @quoted sources if sources.length
 
-    if options.market in markets
-      reqOptions.Market = @quoted(options.market)
-
+    reqOptions.Market = @quoted(options.market) if options.market in markets
     reqOptions
 
   # Given a list of strings, generates a string wrapped in single quotes with
@@ -65,7 +64,7 @@ class Search
 
   search: (vertical, options, callback) ->
     requestOptions =
-      uri: "#{@endPoint}/#{vertical}"
+      uri: "#{BING_SEARCH_ENDPOINT}/#{vertical}"
       qs: _.extend @requestOptions(options),
         $format: 'json'
       auth:
