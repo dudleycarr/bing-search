@@ -38,10 +38,10 @@ Usage
 
 Basic example:
 ```javascript
-var bing = require('bing.search');
+var Search = require('bing.search');
 var util = require('util');
 
-search = new bing.Search('account_key_123');
+search = new Search('account_key_123');
 
 search.web('Tutta Bella Neapolitan Pizzeria',
   {top: 5},
@@ -81,11 +81,11 @@ Output:
     url: 'http://www.tuttabella.com/TuttaBellaWL/' } ]
 ```
 
-### new Search(accountKey, [parallelLimit])
+### new Search(accountKey, [parallelLimit], [useGzip])
 
 The `accountKey` is Bing Search API account key provided by the Azure market
-place. `parallelLimit` is how many parallel requests will be made when fetching
-multiple result sets for a given query.
+place. `parallelLimit` is the number of search results pages fetched in
+parallel for a given query. The default is `10`. `useGzip` defaults to true.
 
 Available methods:
 
@@ -254,7 +254,6 @@ TODOs
 * Support NewsCategory, NewsLocation, NewsSortBy
 * Adjust https max sockets based on concurrent level
 * Support smaller pagination for news
-* Tests / Travis
 
 Changes
 -------

@@ -1,6 +1,6 @@
 _ = require 'underscore'
 async = require 'async'
-debug = require('debug')('bing-search')
+debug = require('debug') 'bing-search'
 request = require 'request'
 url = require 'url'
 
@@ -8,15 +8,14 @@ markets = require './markets'
 
 class Search
   @SOURCES = ['web', 'image', 'video', 'news', 'spell', 'relatedsearch']
+  @PAGE_SIZE = 50
 
-  constructor: (@accountKey, @parallel=10) ->
+  constructor: (@accountKey, @parallel = 10, @useGzip = true) ->
     @endPoint = 'https://api.datamarket.azure.com/Bing/Search'
-    @userAgent = 'NodeJS (https://github.com/dudleycarr/bing-search/)'
-    @useGzip = true
 
   requestOptions: (options) ->
     reqOptions =
-      Query: @quoted(options.query)
+      Query: @quoted options.query
       $top: options.top or 10
       $skip: options.skip or 0
 
@@ -24,32 +23,35 @@ class Search
     sources = (s for s in options.sources or [] when s in Search.SOURCES)
     reqOptions.Sources = @quoted(sources) if sources.length
 
-    if options.market in markets.identifiers
+    if options.market in markets
       reqOptions.Market = @quoted(options.market)
 
     reqOptions
 
+  # Given a list of strings, generates a string wrapped in single quotes with
+  # the list entries separated by a `+`.
   quoted: (values) ->
     values = [values] unless _.isArray values
-    values = (v.replace("'", "''") for v in values)
+    values = (v.replace "'", "''" for v in values)
     "'#{values.join '+'}'"
 
-  # Generates a sequence of numbers no larger than 50 which the sum of the list
-  # equal to numResults.
-  generateTops: (numResults) ->
-    tops = [numResults % 50] if numResults % 50 isnt 0
-    (50 for i in [0...Math.floor(numResults/50)]).concat tops or []
+  # Generates a sequence of numbers no larger than the page size which the sum
+  # of the list equal to numResults.
+  generateTops: (numResults, pageSize = Search.PAGE_SIZE) ->
+    tops = [numResults % pageSize] if numResults % pageSize isnt 0
+    tops or= []
+    (pageSize for i in [0...Math.floor(numResults / pageSize)]).concat tops
 
-  # Generate a sequence of offsets as a multiple of 50 starting at skipStart
-  # and ending before skipStart + numResults.
+  # Generate a sequence of offsets as a multiple of page size starting at
+  # skipStart and ending before skipStart + numResults.
   generateSkips: (numResults, skipStart) ->
     skips = [skipStart]
     for count in @generateTops(numResults)[...-1]
-      skips.push skips[skips.length-1] + count
+      skips.push skips[skips.length - 1] + count
     skips
 
   parallelSearch: (vertical, options, callback) ->
-    opts = _.defaults options, {top: 50, skip: 0}
+    opts = _.extend {}, {top: Search.PAGE_SIZE, skip: 0}, options
 
     # Generate search options for each of the search requests.
     pairs = _.zip @generateTops(opts.top), @generateSkips(opts.top, opts.skip)
@@ -66,8 +68,6 @@ class Search
       uri: "#{@endPoint}/#{vertical}"
       qs: _.extend @requestOptions(options),
         $format: 'json'
-      headers:
-        'User-Agent': @userAgent
       auth:
         user: @accountKey
         pass: @accountKey
@@ -100,7 +100,7 @@ class Search
   extractCounts: (result) ->
     keyRe = /(\w+)Total$/
 
-    _.chain(result?.d?.results)
+    _.chain(result?.d?.results or [])
       .first()
       .pairs()
       .filter ([key, value]) ->
@@ -163,12 +163,13 @@ class Search
         thumbnail: @extractThumbnail entry
       .value()
 
-  extractThumbnail: (entry) ->
-    url: entry.Thumbnail.MediaUrl
-    type: entry.Thumbnail.ContentType
-    width: Number entry.Thumbnail.Width
-    height: Number entry.Thumbnail.Height
-    size: Number entry.Thumbnail.FileSize
+  extractThumbnail: ({Thumbnail}) ->
+
+    url: Thumbnail.MediaUrl
+    type: Thumbnail.ContentType
+    width: Number Thumbnail.Width
+    height: Number Thumbnail.Height
+    size: Number Thumbnail.FileSize
 
   videos: (query, options, callback) ->
     @verticalSearch 'Video', _.bind(@extractVideoResults, this), query, options,
@@ -215,8 +216,8 @@ class Search
       .pluck('d')
       .pluck('results')
       .flatten()
-      .map (entry) ->
-        entry.Value
+      .map ({Value}) ->
+        Value
       .value()
 
   related: (query, options, callback) ->
@@ -235,7 +236,7 @@ class Search
 
   composite: (query, options, callback) ->
     [callback, options] = [options, {}] if arguments.length is 2
-    options = _.defaults options, {query, sources: Search.SOURCES}
+    options = _.defaults {}, options, {query, sources: Search.SOURCES}
 
     @parallelSearch 'Composite', options, (err, results) =>
       return callback err if err
@@ -253,4 +254,4 @@ class Search
         related: @extractRelatedResults convertToSingleSource results,
           'RelatedSearch'
 
-module.exports = {Search}
+module.exports = Search

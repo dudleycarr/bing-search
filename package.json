@@ -2,7 +2,7 @@
   "name": "bing.search",
   "version": "1.0.0",
   "description": "NodeJS Bing Search client",
-  "main": "search.js",
+  "main": "lib/search.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/dudleycarr/bing-search.git"
@@ -39,6 +39,6 @@
     "build": "coffee --bare --compile --output lib src/*.coffee",
     "prepublish": "coffee --bare --compile --output lib src/*.coffee",
     "postpublish": "rm -rf lib",
-    "test": "grunt test"
+    "test": "node_modules/.bin/grunt test"
   }
 }

@@ -1,4 +1,4 @@
-bing = require '../src/search'
+Search = require '../src/search'
 nock = require 'nock'
 should = require 'should'
 util = require 'util'
@@ -12,7 +12,7 @@ describe 'search', ->
   search = null
 
   beforeEach ->
-    search = new bing.Search ACCOUNT_KEY
+    search = new Search ACCOUNT_KEY
     search.useGzip = false
 
   before ->
