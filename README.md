@@ -1,6 +1,6 @@
 Bing Search API for NodeJS
 ==========================
-
+[![Build Status](https://travis-ci.org/dudleycarr/bing-search.svg)](https://travis-ci.org/dudleycarr/bing-search)
 
 Features
 --------
