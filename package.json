@@ -7,6 +7,17 @@
     "type": "git",
     "url": "https://github.com/dudleycarr/bing-search.git"
   },
+  "keywords": [
+    "Bing",
+    "Bing Search",
+    "Bing Search API",
+    "Azure Bing Search API",
+    "Search",
+    "Web Search",
+    "Image Search",
+    "Video Search",
+    "News Search"
+  ],
   "author": {
     "name": "Dudley Carr",
     "email": "dudley.carr@gmail.com"
