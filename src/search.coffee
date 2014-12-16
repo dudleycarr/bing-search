@@ -192,45 +192,30 @@ class Search
       callback
 
   extractNewsResults: (results) ->
-    _.chain(results)
-      .pluck('d')
-      .pluck('results')
-      .flatten()
-      .map (entry) ->
-        id: entry.ID
-        title: entry.Title
-        source: entry.Source
-        url: entry.Url
-        description: entry.Description
-        date: new Date entry.Date
-      .value()
+    @mapResults results, (entry) ->
+      id: entry.ID
+      title: entry.Title
+      source: entry.Source
+      url: entry.Url
+      description: entry.Description
+      date: new Date entry.Date
 
   spelling: (query, options, callback) ->
     @verticalSearch 'SpellingSuggestions', _.bind(@extractSpellResults, this),
       query, options, callback
 
   extractSpellResults: (results) ->
-    _.chain(results)
-      .pluck('d')
-      .pluck('results')
-      .flatten()
-      .map ({Value}) ->
-        Value
-      .value()
+    @mapResults results, ({Value}) ->
+      Value
 
   related: (query, options, callback) ->
     @verticalSearch 'RelatedSearch', _.bind(@extractRelatedResults, this),
       query, options, callback
 
   extractRelatedResults: (results) ->
-    _.chain(results)
-      .pluck('d')
-      .pluck('results')
-      .flatten()
-      .map (entry) ->
-        query: entry.Title
-        url: entry.BingUrl
-      .value()
+    @mapResults results, ({Title, BingUrl}) ->
+      query: Title
+      url: BingUrl
 
   composite: (query, options, callback) ->
     [callback, options] = [options, {}] if arguments.length is 2
